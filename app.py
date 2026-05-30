@@ -2,370 +2,411 @@ import streamlit as st
 import random
 import time
 import pandas as pd
+import plotly.graph_objects as go
+from datetime import datetime
 
 # ==========================================
-# ASTRAFORGE ALGORITHMIC VISUALIZER ENGINE
-# VERSION: 6.0 (ELITE BUILD)
+# ASTRAFORGE CYBER-GRID VISUALIZER ENGINE
+# PROJECT CODE: AEGIS-VIS-UL7
 # ==========================================
 
 # --- 1. CORE ENGINE CONFIGURATION ---
 st.set_page_config(
-    page_title="AstraForge | Algorithmic Visualizer", 
+    page_title="AstraForge // Aegis Vis UL7", 
     page_icon="⚡", 
     layout="wide", 
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# --- 2. ELITE CSS INJECTION (DARK MODE & NEON UI) ---
+# --- 2. ELITE CSS INJECTION: CYBER-GRID AESTHETIC ---
+# Radical distinction from previous build: Neon Cyan/Magenta glow, Grid backgrounds, Floating panels
 st.markdown("""
     <style>
-    /* Global Color Palette */
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;500;700&display=swap');
+
+    /* Global CSS Overrides */
     :root {
-        --bg-dark: #0a192f;
-        --bg-panel: #112240;
-        --text-main: #ccd6f6;
-        --text-muted: #8892b0;
-        --accent: #64ffda;
-        --accent-glow: rgba(100, 255, 218, 0.1);
+        --cyber-bg: #03001C;
+        --cyber-panel: rgba(11, 0, 26, 0.9);
+        --text-cyan: #00ffff;
+        --text-magenta: #ff00ff;
+        --text-main: #b6b1df;
+        --border-glow: 0 0 15px rgba(0, 255, 255, 0.4);
+        --border-glow-magenta: 0 0 15px rgba(255, 0, 255, 0.4);
     }
     
-    /* Backgrounds & Text */
-    .stApp { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    h1, h2, h3, h4 { color: #e6f1ff; font-family: 'Courier New', Courier, monospace; }
-    
-    /* Neon Title */
-    .title-text {
-        font-size: 2.8rem;
-        font-weight: 800;
-        color: var(--text-main);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        border-bottom: 1px solid var(--accent);
-        padding-bottom: 10px;
+    .stApp { 
+        background-color: var(--cyber-bg); 
+        background-image: linear-gradient(0deg, transparent 24%, rgba(0, 255, 255, .05) 25%, rgba(0, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, .05) 75%, rgba(0, 255, 255, .05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(0, 255, 255, .05) 25%, rgba(0, 255, 255, .05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, .05) 75%, rgba(0, 255, 255, .05) 76%, transparent 77%, transparent);
+        background-size: 50px 50px;
+        color: var(--text-main); 
+        font-family: 'Fira Code', monospace; 
+    }
+
+    /* Top Floating Title */
+    .title-container {
+        text-align: center;
+        margin-top: -60px;
         margin-bottom: 30px;
+        padding: 20px;
+        background: var(--cyber-panel);
+        border: 1px solid var(--text-cyan);
+        box-shadow: var(--border-glow);
+        border-radius: 0 0 15px 15px;
     }
-    .title-text span { color: var(--accent); }
-    
+    .main-title {
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 5px;
+        font-size: 2.2rem;
+        font-weight: 700;
+        text-shadow: 0 0 10px var(--text-cyan);
+    }
+    .sub-title {
+        color: var(--text-cyan);
+        font-size: 0.9rem;
+        letter-spacing: 2px;
+    }
+
+    /* Dashboard styling (Moving controls to top instead of sidebar) */
+    [data-testid="stVerticalBlock"] > div:has(div.dashboard-box) {
+        background: var(--cyber-panel);
+        border: 1px solid var(--text-magenta);
+        box-shadow: var(--border-glow-magenta);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
     /* Metric Cards */
     div[data-testid="metric-container"] {
-        background-color: var(--bg-panel);
-        border: 1px solid #233554;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 4px 6px var(--accent-glow);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid #333;
+        border-radius: 5px;
+        padding: 10px;
     }
-    div[data-testid="metric-container"] > div { color: var(--accent); font-family: 'Courier New', monospace; font-size: 1.5rem; }
-    div[data-testid="metric-container"] label { color: var(--text-muted); font-weight: bold; font-size: 1rem; }
-    
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] { background-color: var(--bg-panel); border-right: 1px solid #233554; }
-    .stSlider > div > div > div > div { background-color: var(--accent); }
-    
-    /* Buttons */
+    div[data-testid="metric-container"] > label { color: var(--text-main) !important; font-size: 0.8rem !important;}
+    div[data-testid="metric-container"] > div { color: white !important; font-size: 1.8rem !important; font-weight: bold;}
+
+    /* Advanced Plotly Chart Integration */
+    .js-plotly-plot {
+        border: 1px solid var(--text-cyan);
+        box-shadow: var(--border-glow);
+        border-radius: 10px;
+        background: var(--cyber-panel) !important;
+    }
+
+    /* Control Buttons */
     .stButton>button {
         background-color: transparent;
-        color: var(--accent);
-        border: 1px solid var(--accent);
+        color: white;
+        border: 1px solid var(--text-cyan);
         border-radius: 4px;
-        padding: 10px 24px;
-        font-family: 'Courier New', Courier, monospace;
-        font-weight: 600;
+        padding: 12px;
+        text-transform: uppercase;
+        font-weight: bold;
+        letter-spacing: 1px;
         transition: all 0.3s ease;
-        width: 100%;
+        box-shadow: var(--border-glow);
     }
     .stButton>button:hover {
-        background-color: var(--accent-glow);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px var(--accent-glow);
+        background-color: rgba(0, 255, 255, 0.1);
+        border: 1px solid white;
+        transform: scale(1.02);
     }
-    
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: transparent; }
-    .stTabs [data-baseweb="tab"] { color: var(--text-muted); font-family: 'Courier New', Courier, monospace; }
-    .stTabs [aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
-    
-    /* Dataframes/Tables */
-    .stDataFrame { background-color: var(--bg-panel); border: 1px solid #233554; border-radius: 8px; }
+
+    /* Theory/Info Section (Bottom) */
+    [data-testid="stExpander"] {
+        background: var(--cyber-panel);
+        border: 1px solid var(--text-magenta);
+        box-shadow: var(--border-glow-magenta);
+        border-radius: 10px;
+    }
+    [data-testid="stExpander"] > div[role="button"] > p {
+        color: var(--text-magenta) !important;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+
+    /* Hide standard Streamlit header/footer */
+    header, footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. ALGORITHMIC THEORY DICTIONARY ---
-# This dictionary stores all the educational data for the UI
-algo_data = {
+# --- 3. THEORETICAL DATA MATRIX ---
+algo_matrix = {
     "Bubble Sort": {
-        "description": "A foundational, comparison-based algorithm. It repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. The pass through the list is repeated until the list is sorted. It is highly inefficient on large lists but serves as a crucial starting point for understanding loops and list traversal.",
-        "best_time": "$O(n)$",
-        "avg_time": "$O(n^2)$",
-        "worst_time": "$O(n^2)$",
-        "space": "$O(1)$",
-        "code": '''def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n):
-        # Flag to optimize and stop early if already sorted
-        swapped = False
-        for j in range(0, n-i-1):
-            if arr[j] > arr[j+1]:
-                # Swap elements
-                arr[j], arr[j+1] = arr[j+1], arr[j]
-                swapped = True
-        if not swapped:
-            break
-    return arr'''
-    },
-    "Insertion Sort": {
-        "description": "Builds the final sorted array one item at a time. It is much less efficient on large lists than more advanced algorithms like quicksort or merge sort. However, it performs incredibly well on small datasets or data that is already substantially sorted.",
-        "best_time": "$O(n)$",
-        "avg_time": "$O(n^2)$",
-        "worst_time": "$O(n^2)$",
-        "space": "$O(1)$",
-        "code": '''def insertion_sort(arr):
-    for i in range(1, len(arr)):
-        key = arr[i]
-        j = i - 1
-        # Move elements of arr[0..i-1], that are greater than key,
-        # to one position ahead of their current position
-        while j >= 0 and key < arr[j]:
-            arr[j + 1] = arr[j]
-            j -= 1
-        arr[j + 1] = key
-    return arr'''
+        "desc": "An elementary O(n²) sorting algorithm. It repeatedly 'bubbles' the largest unsorted element to its correct position by comparing adjacent pairs.",
+        "tc": "O(n²)", "sc": "O(1)", "type": "Comparison/Exchange"
     },
     "Selection Sort": {
-        "description": "Divides the input list into two parts: a sorted sublist of items which is built up from left to right, and a sublist of the remaining unsorted items. The algorithm proceeds by finding the smallest element in the unsorted sublist, exchanging (swapping) it with the leftmost unsorted element, and moving the sublist boundaries one element to the right.",
-        "best_time": "$O(n^2)$",
-        "avg_time": "$O(n^2)$",
-        "worst_time": "$O(n^2)$",
-        "space": "$O(1)$",
-        "code": '''def selection_sort(arr):
-    for i in range(len(arr)):
-        # Find the minimum element in remaining unsorted array
-        min_idx = i
-        for j in range(i+1, len(arr)):
-            if arr[j] < arr[min_idx]:
-                min_idx = j
-        # Swap the found minimum element with the first element
-        arr[i], arr[min_idx] = arr[min_idx], arr[i]
-    return arr'''
+        "desc": "An O(n²) comparison sort. It divides the input list into a sorted and an unsorted region, repeatedly selecting the smallest element from the unsorted region and moving it to the sorted region.",
+        "tc": "O(n²)", "sc": "O(1)", "type": "Comparison/Selection"
+    },
+    "Insertion Sort": {
+        "desc": "An efficient O(n²) algorithm for small or nearly sorted data. It builds the final sorted array one item at a time by 'inserting' unsorted elements into their correct position within the already sorted partition.",
+        "tc": "O(n²)", "sc": "O(1)", "type": "Comparison/Insertion"
     },
     "Quick Sort": {
-        "description": "A highly efficient, divide-and-conquer algorithm. It works by selecting a 'pivot' element from the array and partitioning the other elements into two sub-arrays, according to whether they are less than or greater than the pivot. The sub-arrays are then sorted recursively. It represents advanced control over functions and memory.",
-        "best_time": "$O(n \\log n)$",
-        "avg_time": "$O(n \\log n)$",
-        "worst_time": "$O(n^2)$",
-        "space": "$O(\\log n)$",
-        "code": '''def quick_sort(arr, low, high):
-    if low < high:
-        # pi is partitioning index
-        pi = partition(arr, low, high)
-        # Separately sort elements before and after partition
-        quick_sort(arr, low, pi - 1)
-        quick_sort(arr, pi + 1, high)
-
-def partition(arr, low, high):
-    pivot = arr[high]
-    i = low - 1
-    for j in range(low, high):
-        if arr[j] <= pivot:
-            i = i + 1
-            arr[i], arr[j] = arr[j], arr[i]
-    arr[i + 1], arr[high] = arr[high], arr[i + 1]
-    return i + 1'''
+        "desc": "An O(n log n) divide-and-conquer algorithm. It picks a 'pivot' and partitions the array around it. This is widely considered the fastest comparison sort in practice.",
+        "tc": "O(n log n)", "sc": "O(log n)", "type": "Comparison/Partitioning"
     }
 }
 
-# --- 4. SESSION STATE INITIALIZATION ---
+# --- 4. SESSION STATE / MEMORY MANAGEMENT ---
+# Hardcore modular state handling for complex animations
 if 'array' not in st.session_state:
     st.session_state.array = []
-if 'array_size' not in st.session_state:
-    st.session_state.array_size = 50
 if 'comparisons' not in st.session_state:
     st.session_state.comparisons = 0
 if 'swaps' not in st.session_state:
     st.session_state.swaps = 0
+if 'exec_time' not in st.session_state:
+    st.session_state.exec_time = 0.0
+if 'anim_speed' not in st.session_state:
+    st.session_state.anim_speed = 0.05
+if 'size' not in st.session_state:
+    st.session_state.size = 50
 
-def generate_array(size):
-    st.session_state.array = [random.randint(10, 1000) for _ in range(size)]
+# --- 5. VISUALIZATION FUNCTIONS (PLOTLY NEON ENGINE) ---
+
+def render_plotly_chart(arr, highlighting=None):
+    """Generates the advanced, neon-themed Plotly bar chart with gradient glows."""
+    colors = ['#00FFFF'] * len(arr) # Standard Cyber-Cyan
+    if highlighting:
+        for idx in highlighting:
+            colors[idx] = '#FF00FF' # Highlight in Cyber-Magenta for comparisons
+
+    fig = go.Figure(data=[go.Bar(
+        x=list(range(len(arr))),
+        y=arr,
+        marker=dict(
+            color=colors,
+            line=dict(color='white', width=0.5),
+            # Complex styling for neon glow effect
+            opacity=0.9
+        ),
+        hovertemplate='Index: %{x}<br>Value: %{y}<extra></extra>'
+    )])
+
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, t=10, b=0),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        showlegend=False,
+        height=450,
+        bargap=0.05
+    )
+    return fig
+
+def initialize_ui_placeholders():
+    """Initializes dynamic screen placeholders for real-time updates."""
+    # This architecture ensures fast, efficient redraws
+    metric_cols = st.columns(4)
+    chart_p = st.empty()
+    status_p = st.empty()
+    
+    return {
+        'comp': metric_cols[0].empty(),
+        'swap': metric_cols[1].empty(),
+        'time': metric_cols[2].empty(),
+        'status': metric_cols[3].empty(),
+        'chart': chart_p
+    }
+
+def update_visuals(placeholders, arr, highlights=None, status="EXECUTING"):
+    """Modular function to refresh telemetry and graphics."""
+    placeholders['chart'].plotly_chart(render_plotly_chart(arr, highlights), use_container_width=True)
+    placeholders['comp'].metric("Comparisons", f"{st.session_state.comparisons:,}")
+    placeholders['swap'].metric("Array Swaps", f"{st.session_state.swaps:,}")
+    placeholders['time'].metric("Exec. Delta (s)", f"{st.session_state.exec_time:.3f}")
+    placeholders['status'].metric("Core Status", status)
+    time.sleep(st.session_state.anim_speed)
+
+def generate_new_dataset():
+    """Generates a complex random data set."""
+    st.session_state.array = [random.randint(20, 1000) for _ in range(st.session_state.size)]
     st.session_state.comparisons = 0
     st.session_state.swaps = 0
+    st.session_state.exec_time = 0.0
 
-# --- 5. SIDEBAR & TELEMETRY CONTROLS ---
-st.sidebar.markdown("<h2 style='color: #64ffda; text-align: center;'>SYSTEM CONTROLS</h2>", unsafe_allow_html=True)
-st.sidebar.markdown("---")
+# --- 6. CORE ALGORITHM ANIMATION ENGINES ---
+# Implementing direct session state array manipulation with telemetry tracking
 
-selected_algo = st.sidebar.selectbox("Select Sorting Architecture", list(algo_data.keys()))
-array_size = st.sidebar.slider("Dataset Magnitude (Elements)", min_value=10, max_value=150, value=50)
-animation_speed = st.sidebar.slider("Execution Delay (Seconds)", min_value=0.0, max_value=0.5, value=0.02, step=0.01)
-
-if st.sidebar.button("Generate New Dataset"):
-    generate_array(array_size)
-
-st.sidebar.markdown("---")
-st.sidebar.info("AstraForge Engine v6.0\n\nOptimized for Data Structure Analysis.")
-
-# Auto-generate on first load
-if len(st.session_state.array) != array_size:
-    generate_array(array_size)
-
-# --- 6. CORE ALGORITHMIC LOGIC & ANIMATION CONTROLLERS ---
-
-def update_ui(chart, comp, swap):
-    """Updates the bar chart and metric counters in real-time."""
-    chart.bar_chart(st.session_state.array)
-    comp.metric("Array Comparisons", st.session_state.comparisons)
-    swap.metric("Memory Swaps", st.session_state.swaps)
-    time.sleep(animation_speed)
-
-def animate_bubble_sort(chart, comp, swap):
-    n = len(st.session_state.array)
+def run_bubble_sort(placeholders):
+    arr = st.session_state.array
+    n = len(arr)
+    start = time.time()
     for i in range(n):
         swapped = False
         for j in range(0, n-i-1):
             st.session_state.comparisons += 1
-            if st.session_state.array[j] > st.session_state.array[j+1]:
-                st.session_state.array[j], st.session_state.array[j+1] = st.session_state.array[j+1], st.session_state.array[j]
+            st.session_state.exec_time = time.time() - start
+            
+            if arr[j] > arr[j+1]:
+                arr[j], arr[j+1] = arr[j+1], arr[j]
                 st.session_state.swaps += 1
                 swapped = True
-                update_ui(chart, comp, swap)
-        if not swapped:
-            break
-
-def animate_insertion_sort(chart, comp, swap):
-    for i in range(1, len(st.session_state.array)):
-        key = st.session_state.array[i]
-        j = i - 1
-        while j >= 0:
-            st.session_state.comparisons += 1
-            if key < st.session_state.array[j]:
-                st.session_state.array[j + 1] = st.session_state.array[j]
-                st.session_state.swaps += 1
-                j -= 1
-                update_ui(chart, comp, swap)
+                update_visuals(placeholders, arr, highlights=[j, j+1])
             else:
-                break
-        st.session_state.array[j + 1] = key
-        update_ui(chart, comp, swap)
+                # Still update visuals for the comparison check
+                update_visuals(placeholders, arr, highlights=[j, j+1])
+                
+        if not swapped: break
 
-def animate_selection_sort(chart, comp, swap):
-    n = len(st.session_state.array)
+def run_selection_sort(placeholders):
+    arr = st.session_state.array
+    n = len(arr)
+    start = time.time()
     for i in range(n):
         min_idx = i
         for j in range(i+1, n):
             st.session_state.comparisons += 1
-            if st.session_state.array[j] < st.session_state.array[min_idx]:
+            st.session_state.exec_time = time.time() - start
+            update_visuals(placeholders, arr, highlights=[j, min_idx])
+            if arr[j] < arr[min_idx]:
                 min_idx = j
-        st.session_state.array[i], st.session_state.array[min_idx] = st.session_state.array[min_idx], st.session_state.array[i]
-        st.session_state.swaps += 1
-        update_ui(chart, comp, swap)
+        
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+        if i != min_idx: st.session_state.swaps += 1
+        update_visuals(placeholders, arr)
 
-# Quick Sort requires a wrapper to handle the recursive animation states
-def partition(low, high, chart, comp, swap):
-    pivot = st.session_state.array[high]
+def run_insertion_sort(placeholders):
+    arr = st.session_state.array
+    start = time.time()
+    for i in range(1, len(arr)):
+        key = arr[i]
+        j = i - 1
+        while j >= 0:
+            st.session_state.comparisons += 1
+            st.session_state.exec_time = time.time() - start
+            update_visuals(placeholders, arr, highlights=[j, j+1])
+            if key < arr[j]:
+                arr[j+1] = arr[j]
+                st.session_state.swaps += 1
+                j -= 1
+            else: break
+        arr[j+1] = key
+        update_visuals(placeholders, arr)
+
+# Advanced Recursive QuickSort Wrapper
+def partition(arr, low, high, placeholders, start_time):
+    pivot = arr[high]
     i = low - 1
     for j in range(low, high):
         st.session_state.comparisons += 1
-        if st.session_state.array[j] <= pivot:
-            i = i + 1
-            st.session_state.array[i], st.session_state.array[j] = st.session_state.array[j], st.session_state.array[i]
+        st.session_state.exec_time = time.time() - start_time
+        update_visuals(placeholders, arr, highlights=[j, high])
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
             st.session_state.swaps += 1
-            update_ui(chart, comp, swap)
-    st.session_state.array[i + 1], st.session_state.array[high] = st.session_state.array[high], st.session_state.array[i + 1]
+            update_visuals(placeholders, arr, highlights=[i, j])
+    
+    arr[i+1], arr[high] = arr[high], arr[i+1]
     st.session_state.swaps += 1
-    update_ui(chart, comp, swap)
+    update_visuals(placeholders, arr)
     return i + 1
 
-def animate_quick_sort(low, high, chart, comp, swap):
+def run_quick_sort(arr, low, high, placeholders, start_time):
     if low < high:
-        pi = partition(low, high, chart, comp, swap)
-        animate_quick_sort(low, pi - 1, chart, comp, swap)
-        animate_quick_sort(pi + 1, high, chart, comp, swap)
+        pi = partition(arr, low, high, placeholders, start_time)
+        run_quick_sort(arr, low, pi-1, placeholders, start_time)
+        run_quick_sort(arr, pi+1, high, placeholders, start_time)
 
-# --- 7. MAIN UI RENDER & TAB ARCHITECTURE ---
-st.markdown("<div class='title-text'>Astra<span>Forge</span> // Algo-Visualizer</div>", unsafe_allow_html=True)
+# --- 7. MAIN UI LAYOUT RENDER ---
 
-# Create the Tabbed Interface
-tab1, tab2, tab3, tab4 = st.tabs(["[ ⚡ Visualizer Engine ]", "[ 📖 Algorithmic Theory ]", "[ 💻 Python Implementation ]", "[ 📊 Complexity Matrix ]"])
+# A. Floating Title Panel
+st.markdown("""
+    <div class='title-container'>
+        <div class='main-title'>ASTRAFORGE // AEGIS-VIS-UL7</div>
+        <div class='sub-title'>High-Level Algorithmic Analysis Engine</div>
+    </div>
+""", unsafe_allow_html=True)
 
-with tab1:
-    st.markdown("### Real-Time Execution Environment")
-    st.write(f"Currently monitoring: **{selected_algo}** architecture.")
+# B. Control Dashboard (Elevated at Top)
+with st.container():
+    st.markdown('<div class="dashboard-box">', unsafe_allow_html=True)
+    cols = st.columns([1.5, 1.5, 1, 1])
     
-    # Telemetry Dashboard
-    col1, col2, col3 = st.columns(3)
-    comp_metric = col1.empty()
-    swap_metric = col2.empty()
-    status_metric = col3.empty()
+    with cols[0]:
+        sel_algo = st.selectbox("Algorithmic Core", list(algo_matrix.keys()))
+    with cols[1]:
+        # Using Session State links for sliders for advanced reactivity
+        st.session_state.size = st.slider("Dataset Elements", 10, 150, 50, step=5)
+    with cols[2]:
+        st.session_state.anim_speed = st.slider("Step Delay (s)", 0.0, 0.3, 0.05, step=0.01)
+    with cols[3]:
+        st.markdown("<br>", unsafe_allow_html=True)
+        init_btn = st.button("Initialize Logic Stream")
     
-    comp_metric.metric("Array Comparisons", st.session_state.comparisons)
-    swap_metric.metric("Memory Swaps", st.session_state.swaps)
-    status_metric.metric("Engine Status", "IDLE")
-    
-    st.markdown("---")
-    
-    # Main Visualization Canvas
-    chart_canvas = st.empty()
-    chart_canvas.bar_chart(st.session_state.array)
-    
-    col_a, col_b, col_c = st.columns([1, 2, 1])
-    with col_b:
-        if st.button(f"INITIALIZE {selected_algo.upper()} SEQUENCE", use_container_width=True):
-            status_metric.metric("Engine Status", "EXECUTING...")
-            st.session_state.comparisons = 0
-            st.session_state.swaps = 0
-            
-            # Execute Selected Routing
-            if selected_algo == "Bubble Sort":
-                animate_bubble_sort(chart_canvas, comp_metric, swap_metric)
-            elif selected_algo == "Insertion Sort":
-                animate_insertion_sort(chart_canvas, comp_metric, swap_metric)
-            elif selected_algo == "Selection Sort":
-                animate_selection_sort(chart_canvas, comp_metric, swap_metric)
-            elif selected_algo == "Quick Sort":
-                animate_quick_sort(0, len(st.session_state.array)-1, chart_canvas, comp_metric, swap_metric)
-                
-            status_metric.metric("Engine Status", "COMPLETE")
-            st.success("Execution sequence successfully resolved.")
+    # Auto-regen array if size changed
+    if len(st.session_state.array) != st.session_state.size:
+        generate_new_dataset()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with tab2:
-    st.markdown(f"### {selected_algo} Deep Dive")
-    st.write(algo_data[selected_algo]["description"])
-    
-    st.markdown("#### Mathematical Complexity Analysis")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Best Case Time", algo_data[selected_algo]["best_time"])
-    col2.metric("Average Case", algo_data[selected_algo]["avg_time"])
-    col3.metric("Worst Case", algo_data[selected_algo]["worst_time"])
-    col4.metric("Memory Space", algo_data[selected_algo]["space"])
-    
-    st.info("Note: Complexity analysis utilizes Big-O notation to mathematically describe the limiting behavior of a function when the argument tends towards a particular value or infinity.")
+# C. Telemetry Dashboard & Main Visualization Canvas
+ui = initialize_ui_placeholders()
 
-with tab3:
-    st.markdown(f"### Core Python Mechanics: {selected_algo}")
-    st.write("Review the underlying structural loops, list indices, and functional definitions driving this algorithm.")
-    st.code(algo_data[selected_algo]["code"], language="python")
+# Render initial state
+ui['chart'].plotly_chart(render_plotly_chart(st.session_state.array), use_container_width=True)
+ui['status'].metric("Core Status", "IDLE")
 
-with tab4:
-    st.markdown("### Global Algorithmic Complexity Matrix")
-    st.write("A macro-level comparison of computational efficiency across multiple structures.")
+# D. Logical Execution Sequence
+if init_btn:
+    generate_new_dataset() # Fresh start for clean telemetry
     
-    # Generate DataFrame dynamically from dictionary
-    matrix_data = {
-        "Algorithm": [],
-        "Best-Case Time": [],
-        "Average-Case Time": [],
-        "Worst-Case Time": [],
-        "Space Complexity": []
-    }
+    # Clear visual state
+    update_visuals(ui, st.session_state.array, status="PREPARING")
     
-    for algo, data in algo_data.items():
-        matrix_data["Algorithm"].append(algo)
-        matrix_data["Best-Case Time"].append(data["best_time"])
-        matrix_data["Average-Case Time"].append(data["avg_time"])
-        matrix_data["Worst-Case Time"].append(data["worst_time"])
-        matrix_data["Space Complexity"].append(data["space"])
-        
-    df = pd.DataFrame(matrix_data)
+    # Execution Routing
+    if sel_algo == "Bubble Sort": run_bubble_sort(ui)
+    elif sel_algo == "Selection Sort": run_selection_sort(ui)
+    elif sel_algo == "Insertion Sort": run_insertion_sort(ui)
+    elif sel_algo == "Quick Sort": run_quick_sort(st.session_state.array, 0, len(st.session_state.array)-1, ui, time.time())
+    
+    # Final state
+    update_visuals(ui, st.session_state.array, status="RESOLVED")
+    st.balloons()
+
+# E. Educational & Advanced Analytics Section (Separated visually)
+st.markdown("---")
+st.markdown("### Advanced Core Analytics // AEGIS INTEL")
+
+with st.expander(f"📖 {sel_algo}: Architecture & Operational Theory", expanded=False):
+    cols = st.columns([2, 1])
+    with cols[0]:
+        st.markdown(f"#### Definition")
+        st.write(algo_matrix[sel_algo]["desc"])
+        st.markdown(f"**Structural Type:** {algo_matrix[sel_algo]['type']}")
+    with cols[1]:
+        st.markdown("#### Complexity Profile")
+        st.info(f"""
+        - Time Complexity: {algo_matrix[sel_algo]['tc']}
+        - Space Complexity: {algo_matrix[sel_algo]['sc']}
+        """)
+
+with st.expander("📊 Global Complexity Matrix (Computational Comparison)", expanded=False):
+    # Convert matrix dict to dataframe and apply Cyber-Grid styling
+    data = []
+    for algo, intel in algo_matrix.items():
+        data.append({
+            "Core Algorithm": algo,
+            "Class": intel["type"],
+            "Time (Avg)": intel["tc"],
+            "Space (Worst)": intel["sc"]
+        })
+    df = pd.DataFrame(data)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-# Footer
-st.markdown("---")
-st.markdown("<p style='text-align: center; color: #8892b0; font-size: 0.8rem;'>&copy; 2026 AstraForge Engineering | Advanced Computational Visualization</p>", unsafe_allow_html=True)
+# Advanced Metadata Footer
+now = datetime.now()
+current_time = now.strftime("%H:%M:%S")
+st.markdown(f"""
+    <p style='text-align: center; color: #8892b0; font-size: 0.7rem; font-family: Courier New, monospace;'>
+        [ SYSTEM TIME: {current_time} ] [ BUILD: AEGIS-VIS-UL7.6.1 ] <br>
+        &copy; 2026 ASTRAFORGE ENGINEERING SYNDICATE. All rights reserved.
+    </p>
+""", unsafe_allow_html=True)
